@@ -1,0 +1,72 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: splitdost-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mypass}
+      POSTGRES_DB: ${DB_NAME:-splitdost}
+      POSTGRES_INITDB_ARGS: "-U postgres"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - splitdost-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: splitdost-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-splitdost}
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-mypass}
+      JWT_SECRET: ${JWT_SECRET:-splitdostmanish11jan2026}
+      NODE_ENV: ${NODE_ENV:-development}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src
+      - /app/node_modules
+    networks:
+      - splitdost-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: splitdost-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - splitdost-network
+    restart: unless-stopped
+    environment:
+      # Add any frontend environment variables here if needed
+      VITE_API_URL: http://localhost/api
+
+volumes:
+  postgres_data:
+
+networks:
+  splitdost-network:
+    driver: bridge
