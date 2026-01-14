@@ -62,7 +62,7 @@ services:
     restart: unless-stopped
     environment:
       # Add any frontend environment variables here if needed
-      VITE_API_URL: http://13.63.44.212
+      VITE_API_URL: http://13.63.44.212:3000
 
 volumes:
   postgres_data:
